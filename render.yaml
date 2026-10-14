@@ -1,0 +1,36 @@
+# Render blueprint - https://render.com/docs/blueprint-spec
+# Free tier web service. Render Cron Jobs are a paid feature, so the daily run
+# is driven by the app's internal scheduler (SCHEDULER_ENABLED=true) and kept
+# awake by any external uptime/cron ping hitting GET /cron every few minutes.
+services:
+  - type: web
+    name: daily-video-automation
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /health
+    envVars:
+      - key: API_TOKEN
+        sync: false          # set in the Render dashboard
+      - key: TZ_NAME
+        value: Asia/Kolkata
+      - key: SCHEDULE_HOUR
+        value: "19"
+      - key: SCHEDULE_MINUTE
+        value: "0"
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: SCHEDULER_INTERVAL_MINUTES
+        value: "5"
+      - key: OLLAMA_BASE_URL
+        value: ""            # free Render instances have 512 MB RAM: LLM stays off
+      - key: TTS_ENGINE
+        value: auto
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+        sync: false
+      - key: FONT_PATH
+        value: /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf

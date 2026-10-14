@@ -1,0 +1,16 @@
+node_modules/
+output/
+logs/
+*.log
+
+# Google secrets - never commit
+credentials.json
+token.json
+service-account*.json
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+{
+  "name": "daily-video-automation",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Free daily vertical video automation as a cloud backend: local/free LLM story, free TTS, procedural cinematic FFmpeg render, Google Drive upload. Deploys to Render, Koyeb, Railway, Cloud Run or any container host.",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js --serve",
+    "video": "node src/index.js --once",
+    "story": "node src/index.js --story-only",
+    "schedule": "node src/index.js --scheduler",
+    "auth": "node scripts/auth.js",
+    "doctor": "node scripts/doctor.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0"
+  }
+}

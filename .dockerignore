@@ -1,0 +1,8 @@
+node_modules
+output
+logs
+.git
+.env
+credentials.json
+token.json
+*.log

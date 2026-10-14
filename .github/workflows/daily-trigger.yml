@@ -1,0 +1,17 @@
+name: Daily video trigger
+
+on:
+  schedule:
+    # 13:35 UTC = 19:05 IST - shortly after the scheduled slot
+    - cron: '35 13 * * *'
+    # 17:45 UTC = 23:15 IST - safety net if the service was asleep
+    - cron: '45 17 * * *'
+  workflow_dispatch:
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the service and run whatever is due
+        run: |
+          curl -fsS -X POST "${{ secrets.APP_URL }}/cron?token=${{ secrets.API_TOKEN }}" \
+            || echo "trigger failed (the service retries on its own next tick)"
