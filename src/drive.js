@@ -67,10 +67,24 @@ function authKind() {
 }
 
 function parentArgs() {
-  const parents = [];
-  if (config.drive.folderId) parents.push(config.drive.folderId);
-  parents.push('root');
-  return parents;
+  const id = folderId();
+  return id ? [id, 'root'] : ['root'];
+}
+
+/**
+ * Accepts either a bare folder ID or a full Drive folder URL, so a pasted
+ * link still works. Falls back to the service account's root with a warning.
+ */
+function folderId() {
+  const raw = (config.drive.folderId || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/\/folders\/([A-Za-z0-9_-]{10,})/);
+  if (match) return match[1];
+  if (raw.includes('/') || raw.includes('?')) {
+    log.warn('GOOGLE_DRIVE_FOLDER_ID looks like a URL and could not be parsed - using Drive root');
+    return '';
+  }
+  return raw;
 }
 
 /** Finds an existing file by exact name in the destination folder. */
@@ -79,7 +93,8 @@ async function findByName(name) {
   const drive = await getDrive();
   const names = JSON.stringify([name]);
   const q = [`name = ${names}`, 'trashed = false'];
-  if (config.drive.folderId) q.push(`'${config.drive.folderId}' in parents`);
+  const id = folderId();
+  if (id) q.push(`'${id}' in parents`);
   const res = await drive.files.list({
     q: q.join(' and '),
     fields: 'files(id,name,size,modifiedTime,webViewLink)',
@@ -98,6 +113,7 @@ async function uploadFile({ filePath, name, mimeType, description }) {
       name: fileName,
       description,
       mimeType,
+      parents: parentArgs(),
     },
     media: {
       mimeType,
@@ -111,7 +127,7 @@ async function uploadFile({ filePath, name, mimeType, description }) {
 async function uploadJson({ name, data, description }) {
   const drive = await getDrive();
   const res = await drive.files.create({
-    requestBody: { name, description, mimeType: 'application/json' },
+    requestBody: { name, description, mimeType: 'application/json', parents: parentArgs() },
     media: {
       mimeType: 'application/json',
       body: Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf8'),
