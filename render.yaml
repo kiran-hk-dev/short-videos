@@ -15,9 +15,9 @@ services:
       - key: TZ_NAME
         value: Asia/Kolkata
       - key: SCHEDULE_HOUR
-        value: "19"
+        value: "15"
       - key: SCHEDULE_MINUTE
-        value: "0"
+        value: "42"
       - key: SCHEDULER_ENABLED
         value: "true"
       - key: SCHEDULER_INTERVAL_MINUTES

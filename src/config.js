@@ -48,8 +48,8 @@ module.exports = {
   },
 
   schedule: {
-    hour: int('SCHEDULE_HOUR', 19),
-    minute: int('SCHEDULE_MINUTE', 0),
+    hour: int('SCHEDULE_HOUR', 15),
+    minute: int('SCHEDULE_MINUTE', 42),
     enabled: bool('SCHEDULER_ENABLED', true),
     intervalMinutes: Math.max(1, int('SCHEDULER_INTERVAL_MINUTES', 5)),
     catchUpDays: int('CATCH_UP_DAYS', 1),
