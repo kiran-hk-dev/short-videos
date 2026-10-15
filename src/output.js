@@ -65,4 +65,4 @@ function resolveFile(name) {
   return file;
 }
 
-module.exports = { list, withDurations, resolveFile };
+module.exports = { list, withDurations, resolveFile, plan: () => require('./render').plan() };

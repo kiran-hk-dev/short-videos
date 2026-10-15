@@ -110,7 +110,7 @@ function zoomRenderSize(width, height) {
   return { w, h, scale: w / width, memoryLimitMB: limit };
 }
 
-function buildFilter({ duration, story, footer }) {
+function buildFilter({ duration, story, footer, motion = 'zoom' }) {
   const { width, height, fps, accent, zoomRate, channelName, grain } = config.render;
   const dur = Math.max(2, duration);
   const font = findFont();
@@ -140,13 +140,15 @@ function buildFilter({ duration, story, footer }) {
 
   const graph = [];
 
-  // Slow cinematic push-in over the still background.
-  graph.push(
-    `[0:v]zoompan=z='min(1+${zoomRate}*on,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'`
-    + `:d=1:s=${zoom.w}x${zoom.h}:fps=${fps},setsar=1`
-    + (zoom.scale < 1 ? `,scale=${width}:${height}:flags=bicubic` : '')
-    + '[bg]',
-  );
+  // Slow cinematic push-in over the still background. `static` motion is the
+  // cheap fallback for instances too small to survive per-frame zoompan.
+  const head = motion === 'zoom'
+    ? `[0:v]zoompan=z='min(1+${zoomRate}*on,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'`
+      + `:d=1:s=${zoom.w}x${zoom.h}:fps=${fps},setsar=1`
+      + (zoom.scale < 1 ? `,scale=${width}:${height}:flags=bicubic` : '')
+      + '[bg]'
+    : `[0:v]scale=${width}:${height},setsar=1[bg]`;
+  graph.push(head);
 
   const steps = [];
 
@@ -233,19 +235,16 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
   }
   seconds = Math.max(2, seconds + 0.8);
 
-  const filterComplex = buildFilter({
-    duration: seconds,
-    story,
-    footer: dates.human(dateKey),
-  });
+  const started = Date.now();
+  const footer = dates.human(dateKey);
 
-  const args = [
+  const buildArgs = (motion) => [
     '-y',
     '-loop', '1',
     '-framerate', String(fps),
     '-i', backgroundFile,
     '-i', audioFile,
-    '-filter_complex', filterComplex,
+    '-filter_complex', buildFilter({ duration: seconds, story, footer, motion }),
     '-map', '[outv]',
     '-map', '1:a',
     '-t', seconds.toFixed(2),
@@ -267,12 +266,7 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
     outFile,
   ];
 
-  const started = Date.now();
-  try {
-    await tools.ffmpeg(args, { label: 'render' });
-  } catch (error) {
-    // ffmpeg creates the output file up front, so a killed render leaves an
-    // empty/partial MP4 behind. Remove it so nothing mistakes it for a success.
+  const cleanupPartial = () => {
     try {
       const partial = fs.existsSync(outFile) ? fs.statSync(outFile).size : 0;
       fs.rmSync(outFile, { force: true });
@@ -280,7 +274,28 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
     } catch {
       /* ignore */
     }
-    throw error;
+  };
+
+  let motion = config.render.motion === 'auto' || !config.render.motion ? 'zoom' : config.render.motion;
+
+  try {
+    await tools.ffmpeg(buildArgs(motion), { label: 'render' });
+  } catch (error) {
+    cleanupPartial();
+    if (motion === 'zoom') {
+      // Free instances regularly run out of memory on the per-frame zoom;
+      // a still-frame render is cheap and still produces a complete video.
+      log.warn('Zoom render failed, retrying without motion', { error: String(error.message).split('\n')[0] });
+      motion = 'static';
+      try {
+        await tools.ffmpeg(buildArgs('static'), { label: 'render-static' });
+      } catch (staticError) {
+        cleanupPartial();
+        throw staticError;
+      }
+    } else {
+      throw error;
+    }
   }
   const stat = fs.statSync(outFile);
   log.info('MP4 rendered', {
@@ -288,9 +303,10 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
     mb: (stat.size / (1024 * 1024)).toFixed(2),
     bytes: stat.size,
     seconds,
+    motion,
     renderSeconds: Math.round((Date.now() - started) / 1000),
     size: `${width}x${height}@${fps}`,
-    zoomScale: zoomRenderSize(width, height).scale,
+    zoomScale: motion === 'zoom' ? zoomRenderSize(width, height).scale : null,
   });
   return outFile;
 }

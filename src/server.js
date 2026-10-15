@@ -13,6 +13,7 @@ const drive = require('./drive');
 const tts = require('./tts');
 const selftest = require('./selftest');
 const output = require('./output');
+const system = require('./system');
 
 const startedAt = new Date();
 let lastRun = null;
@@ -154,6 +155,9 @@ function create() {
         ok: true,
         outputDir: config.paths.outputDir,
         note: 'files here live on the container disk and are lost on redeploy; Drive is the permanent copy',
+        containerUptimeSeconds: Math.round(process.uptime()),
+        memoryLimitMB: system.memoryLimitMB(),
+        renderPlan: output.plan(),
         count: files.length,
         files: files.map((f) => ({
           ...f,

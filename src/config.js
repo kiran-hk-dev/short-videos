@@ -104,6 +104,7 @@ module.exports = {
     preset: str('PRESET', 'veryfast'),
     zoomRate: float('ZOOM_RATE', 0.0004),
     zoomScale: float('ZOOM_RENDER_SCALE', 0),
+    motion: str('RENDER_MOTION', 'auto').toLowerCase(),
     accent: str('ACCENT_COLOR', '#E8B44A'),
     channelName: str('CHANNEL_NAME', 'Daily Short'),
     fontPath: str('FONT_PATH', ''),
