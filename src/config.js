@@ -32,6 +32,21 @@ function bool(name, fallback) {
   return /^(1|true|yes|on|enabled)$/i.test(String(v).trim());
 }
 
+/**
+ * An invalid TZ_NAME makes Intl.DateTimeFormat throw at import time, which
+ * takes the whole service down, so fall back to IST and say so.
+ */
+function validTimeZone(value, fallback = 'Asia/Kolkata') {
+  try {
+    // eslint-disable-next-line no-new
+    new Intl.DateTimeFormat('en-CA', { timeZone: value });
+    return value;
+  } catch {
+    process.stderr.write(`[WARN] TZ_NAME="${value}" is not a valid IANA time zone; using ${fallback}\n`);
+    return fallback;
+  }
+}
+
 const width = int('WIDTH', 1080);
 const height = int('HEIGHT', 1920);
 
@@ -39,7 +54,7 @@ module.exports = {
   root: ROOT,
   isRender: bool('IS_RENDER', Boolean(process.env.RENDER)),
 
-  timeZone: str('TZ_NAME', 'Asia/Kolkata'),
+  timeZone: validTimeZone(str('TZ_NAME', 'Asia/Kolkata')),
 
   api: {
     token: str('API_TOKEN', ''),
