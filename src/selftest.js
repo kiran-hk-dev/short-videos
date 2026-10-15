@@ -102,6 +102,23 @@ async function main() {
         });
         report.drive.fileCount = (inside.data.files || []).length;
         report.drive.recentFiles = (inside.data.files || []).map((f) => `${f.name} (${f.size || 0}b)`);
+
+        // Write probe: a Viewer share can read the folder but cannot add files.
+        try {
+          const probeName = `.write-probe-${Date.now()}.txt`;
+          const probe = await client.files.create({
+            requestBody: { name: probeName, parents: [folderId] },
+            media: { mimeType: 'text/plain', body: Buffer.from('ok') },
+            fields: 'id',
+          });
+          await client.files.delete({ fileId: probe.data.id });
+          report.drive.canWrite = true;
+        } catch (error) {
+          report.ok = false;
+          report.drive.canWrite = false;
+          report.drive.writeError = String(error.message).split('\n').slice(0, 3).join(' | ');
+          report.drive.hint = 'Share the folder with the service account as "File creator" (or Writer), not Viewer.';
+        }
       } else {
         report.drive.folder = { readable: false, note: 'GOOGLE_DRIVE_FOLDER_ID is empty' };
       }
