@@ -14,10 +14,24 @@ const selftest = require('./selftest');
 const startedAt = new Date();
 let lastRun = null;
 
+function tokenHint() {
+  const token = config.api.token;
+  if (!token) return { set: false, allowUnauthenticated: config.api.allowOpenCron };
+  // Enough to compare against a candidate token without leaking the secret.
+  return {
+    set: true,
+    first8: token.slice(0, 8),
+    last4: token.slice(-4),
+    length: token.length,
+    hint: 'the first 8 and last 4 characters must match the token you send',
+  };
+}
+
 function publicConfig() {
   return {
     timeZone: config.timeZone,
     schedule: `${String(config.schedule.hour).padStart(2, '0')}:${String(config.schedule.minute).padStart(2, '0')}`,
+    apiToken: tokenHint(),
     schedulerEnabled: config.schedule.enabled,
     schedulerIntervalMinutes: config.schedule.intervalMinutes,
     catchUpDays: config.schedule.catchUpDays,
