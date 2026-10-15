@@ -2,10 +2,10 @@ name: Daily video trigger
 
 on:
   schedule:
-    # 13:35 UTC = 19:05 IST - shortly after the scheduled slot
-    - cron: '35 13 * * *'
-    # 17:45 UTC = 23:15 IST - safety net if the service was asleep
-    - cron: '45 17 * * *'
+    # 10:12 UTC = 15:42 IST - shortly after the scheduled slot
+    - cron: '12 10 * * *'
+    # 14:42 UTC = 20:12 IST - safety net if the service was asleep
+    - cron: '42 14 * * *'
   workflow_dispatch:
 jobs:
   trigger:

@@ -185,6 +185,11 @@ function buildFilter({ duration, story, footer }) {
  */
 async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration, force = false }) {
   const { width, height, fps, crf, preset } = config.render;
+  if (!findFont()) {
+    throw new Error(
+      'No usable TTF font for drawtext. Install a font package (fonts-dejavu-core) or set FONT_PATH to a .ttf file.',
+    );
+  }
   fs.mkdirSync(config.paths.outputDir, { recursive: true });
   const outFile = path.join(config.paths.outputDir, `daily-short-${dateKey.replace(/-/g, '')}.mp4`);
 

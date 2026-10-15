@@ -9,6 +9,7 @@ const pipeline = require('./pipeline');
 const scheduler = require('./scheduler');
 const drive = require('./drive');
 const tts = require('./tts');
+const selftest = require('./selftest');
 
 const startedAt = new Date();
 let lastRun = null;
@@ -47,7 +48,7 @@ function create() {
   app.get('/', (req, res) => {
     res.json({
       service: 'daily-video-automation',
-      endpoints: ['GET /health', 'GET /status', 'POST /run?date=YYYY-MM-DD', 'GET /cron', 'POST /cron'],
+      endpoints: ['GET /health', 'GET /status', 'GET /selftest', 'POST /run?date=YYYY-MM-DD', 'GET /cron', 'POST /cron'],
       ...publicConfig(),
     });
   });
@@ -92,13 +93,43 @@ function create() {
     }
     const force = String(req.query.force ?? req.body.force ?? '0') === '1';
     const upload = String(req.query.upload ?? req.body.upload ?? '1') === '1';
-    lastRun = { dateKey: requested, startedAt: new Date().toISOString(), force };
+    // A full run takes minutes on a free instance and would outlast the proxy
+    // timeout, so HTTP callers get an immediate ack and poll /status instead.
+    const wait = String(req.query.wait ?? req.body.wait ?? '0') === '1';
+    lastRun = { dateKey: requested, startedAt: new Date().toISOString(), force, mode: wait ? 'sync' : 'async' };
+
+    if (pipeline.isRunning()) {
+      res.status(409).json({ ok: false, error: 'a run is already in progress', lastRun });
+      return;
+    }
+
+    if (!wait) {
+      res.json({ ok: true, accepted: true, dateKey: requested, poll: '/status' });
+      pipeline.runDate(requested, { force, upload })
+        .then((result) => {
+          lastRun = { ...lastRun, finishedAt: new Date().toISOString(), ok: true, result };
+        })
+        .catch((error) => {
+          lastRun = { ...lastRun, finishedAt: new Date().toISOString(), ok: false, error: error.message };
+        });
+      return;
+    }
+
     try {
       const result = await pipeline.runDate(requested, { force, upload });
       lastRun = { ...lastRun, finishedAt: new Date().toISOString(), ok: true, result };
       res.json({ ok: true, ...result });
     } catch (error) {
       lastRun = { ...lastRun, finishedAt: new Date().toISOString(), ok: false, error: error.message };
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.get('/selftest', async (req, res) => {
+    try {
+      const report = await selftest.main();
+      res.status(report.ok ? 200 : 500).json(report);
+    } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
     }
   });

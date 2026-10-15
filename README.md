@@ -59,7 +59,7 @@ Pick Render or Koyeb for the least work, then add the free GitHub Actions trigge
    | --- | --- |
    | `API_TOKEN` | long random string — required by `/run` and `/cron` |
    | `TZ_NAME` | `Asia/Kolkata` |
-   | `SCHEDULE_HOUR` / `SCHEDULE_MINUTE` | `19` / `0` |
+   | `SCHEDULE_HOUR` / `SCHEDULE_MINUTE` | `15` / `42` |
    | `SCHEDULER_ENABLED` | `true` |
    | `CATCH_UP_DAYS` | `1` — fill yesterday if a day was missed, `0` disables |
    | `OLLAMA_BASE_URL` | empty on the free tier |
@@ -140,9 +140,15 @@ curl -X POST "https://<service>/run?token=<API_TOKEN>&date=2026-10-14&force=1"
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/health` | none | Liveness, IST date/time, whether a run is in progress |
+| `GET` | `/selftest` | none | Fast probe of every stage: ffmpeg/ffprobe, font, TTS engine, memory/disk, Drive auth + folder read access, files already in the folder |
 | `GET` | `/status` | none | Config summary, next run, due dates, full ledger |
+| `POST` | `/run` | token | Run one date. Query/body: `date=YYYY-MM-DD`, `force=1`, `upload=0`, `wait=1` |
 | `POST` | `/run` | token | Run one date. Query/body: `date=YYYY-MM-DD`, `force=1`, `upload=0` |
 | `GET`/`POST` | `/cron` | token | Run whatever is due right now (use this for external crons) |
+
+`POST /run` returns immediately (`{"accepted":true}`) and works in the background, because a full render
+outlasts the proxy timeout on a free instance; poll `/status` for the result. Add `wait=1` to block until
+the run finishes.
 
 Send the token as `x-api-token: <token>`, `Authorization: Bearer <token>` or `?token=<token>`.
 `GET /` returns a short index of these endpoints. If `API_TOKEN` is left empty, `/run` and `/cron`
