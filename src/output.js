@@ -21,6 +21,7 @@ function list() {
       if (!stat.isFile()) return null;
       return {
         name,
+        sizeBytes: stat.size,
         sizeMB: Number((stat.size / 1048576).toFixed(2)),
         createdAt: stat.mtime.toISOString(),
         isVideo: name.endsWith('.mp4'),
@@ -36,11 +37,17 @@ async function withDurations(files) {
   for (const file of files) {
     let durationSeconds = null;
     if (file.isVideo || file.isAudio) {
-      try {
-        const seconds = await tools.probeDurationSeconds(path.join(config.paths.outputDir, file.name));
-        durationSeconds = seconds ? Number(seconds.toFixed(1)) : null;
-      } catch {
-        durationSeconds = null;
+      if (file.sizeBytes === 0) {
+        file.problem = 'empty file - the render was interrupted before writing any frames';
+      } else {
+        try {
+          const seconds = await tools.probeDurationSeconds(path.join(config.paths.outputDir, file.name));
+          durationSeconds = seconds ? Number(seconds.toFixed(1)) : null;
+          if (seconds === null) file.problem = 'not a readable media file - incomplete render';
+        } catch (error) {
+          durationSeconds = null;
+          file.problem = String(error.message).split('\n')[0];
+        }
       }
     }
     out.push({ ...file, durationSeconds });

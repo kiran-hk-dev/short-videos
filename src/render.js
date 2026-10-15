@@ -268,14 +268,29 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
   ];
 
   const started = Date.now();
-  await tools.ffmpeg(args, { label: 'render' });
+  try {
+    await tools.ffmpeg(args, { label: 'render' });
+  } catch (error) {
+    // ffmpeg creates the output file up front, so a killed render leaves an
+    // empty/partial MP4 behind. Remove it so nothing mistakes it for a success.
+    try {
+      const partial = fs.existsSync(outFile) ? fs.statSync(outFile).size : 0;
+      fs.rmSync(outFile, { force: true });
+      log.warn('Partial MP4 removed after a failed render', { file: outFile, partialBytes: partial });
+    } catch {
+      /* ignore */
+    }
+    throw error;
+  }
   const stat = fs.statSync(outFile);
   log.info('MP4 rendered', {
     file: outFile,
     mb: (stat.size / (1024 * 1024)).toFixed(2),
+    bytes: stat.size,
     seconds,
     renderSeconds: Math.round((Date.now() - started) / 1000),
     size: `${width}x${height}@${fps}`,
+    zoomScale: zoomRenderSize(width, height).scale,
   });
   return outFile;
 }
