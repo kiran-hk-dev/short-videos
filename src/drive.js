@@ -97,14 +97,18 @@ function folderId() {
   return raw;
 }
 
+/** Drive's q syntax wants single quotes; double quotes cause "Invalid Value". */
+function driveQuote(value) {
+  return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
 /** Finds an existing file by exact name in the destination folder. */
 async function findByName(name) {
   if (!config.drive.enabled) return null;
   const drive = await getDrive();
-  const names = JSON.stringify([name]);
-  const q = [`name = ${names}`, 'trashed = false'];
+  const q = [`name = ${driveQuote(name)}`, 'trashed = false'];
   const id = folderId();
-  if (id) q.push(`'${id}' in parents`);
+  if (id) q.push(`${driveQuote(id)} in parents`);
   const res = await drive.files.list({
     q: q.join(' and '),
     fields: 'files(id,name,size,modifiedTime,webViewLink)',
