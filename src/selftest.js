@@ -125,6 +125,21 @@ async function main() {
     } catch (error) {
       report.ok = false;
       report.drive.error = String(error.message).split('\n')[0];
+      report.drive.hint = 'A service account can only write into a folder that is shared with it '
+        + '(role: File creator or Writer). Check GOOGLE_DRIVE_FOLDER_ID and the folder share.';
+      // Show what this service account can actually see, to separate
+      // "wrong folder id" from "no access at all".
+      try {
+        const visible = await client.files.list({
+          q: 'trashed = false',
+          fields: 'files(id,name,mimeType)',
+          pageSize: 10,
+          orderBy: 'modifiedTime desc',
+        });
+        report.drive.visibleToServiceAccount = (visible.data.files || []).map((f) => `${f.name} [${f.mimeType.split('/').pop()}]`);
+      } catch {
+        report.drive.visibleToServiceAccount = 'could not list files';
+      }
     }
   }
 

@@ -6,7 +6,16 @@ const { google } = require('googleapis');
 const config = require('./config');
 const log = require('./log');
 
-const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+/**
+ * The full Drive scope is required here, not the narrower `drive.file`.
+ * `drive.file` only exposes files this app created, so a folder that is merely
+ * *shared* with the service account stays invisible and uploads fail with
+ * "File not found". A service account only ever sees what was shared with it,
+ * so the wider scope is still limited to that one folder in practice.
+ * Override with GOOGLE_SCOPES if you want something else.
+ */
+const SCOPES = (process.env.GOOGLE_SCOPES
+  || 'https://www.googleapis.com/auth/drive').split(',').map((s) => s.trim()).filter(Boolean);
 
 let cachedDrive = null;
 let cachedAuthKind = null;
