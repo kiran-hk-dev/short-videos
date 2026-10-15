@@ -140,7 +140,9 @@ curl -X POST "https://<service>/run?token=<API_TOKEN>&date=2026-10-14&force=1"
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/health` | none | Liveness, IST date/time, whether a run is in progress |
-| `GET` | `/selftest` | none | Fast probe of every stage: ffmpeg/ffprobe, font, TTS engine, memory/disk, Drive auth + folder read access, files already in the folder |
+| `GET` | `/selftest` | none | Fast probe of every stage: ffmpeg/ffprobe, font, TTS engine, real cgroup memory/CPU limits, Drive auth + folder read/write access, files already in the folder |
+| `GET` | `/files` | token | List what this container has produced (MP4 size + duration, story, audio) with download links |
+| `GET` | `/files/:name` | token | Download one artefact from the container (`/files/daily-short-20261015.mp4?token=…`) |
 | `GET` | `/status` | none | Config summary, next run, due dates, full ledger |
 | `POST` | `/run` | token | Run one date. Query/body: `date=YYYY-MM-DD`, `force=1`, `upload=0`, `wait=1` |
 | `POST` | `/run` | token | Run one date. Query/body: `date=YYYY-MM-DD`, `force=1`, `upload=0` |

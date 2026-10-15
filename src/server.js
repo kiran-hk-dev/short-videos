@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const config = require('./config');
 const log = require('./log');
 const dates = require('./dates');
@@ -10,6 +12,7 @@ const scheduler = require('./scheduler');
 const drive = require('./drive');
 const tts = require('./tts');
 const selftest = require('./selftest');
+const output = require('./output');
 
 const startedAt = new Date();
 let lastRun = null;
@@ -62,7 +65,7 @@ function create() {
   app.get('/', (req, res) => {
     res.json({
       service: 'daily-video-automation',
-      endpoints: ['GET /health', 'GET /status', 'GET /selftest', 'POST /run?date=YYYY-MM-DD', 'GET /cron', 'POST /cron'],
+      endpoints: ['GET /health', 'GET /status', 'GET /selftest', 'GET /files', 'POST /run?date=YYYY-MM-DD', 'GET /cron', 'POST /cron'],
       ...publicConfig(),
     });
   });
@@ -137,6 +140,44 @@ function create() {
       lastRun = { ...lastRun, finishedAt: new Date().toISOString(), ok: false, error: error.message };
       res.status(500).json({ ok: false, error: error.message });
     }
+  });
+
+  // Inspect (and download) what the container has produced, without Drive.
+  app.get('/files', async (req, res) => {
+    if (!authorised(req)) {
+      res.status(401).json({ ok: false, error: 'unauthorised' });
+      return;
+    }
+    try {
+      const files = await output.withDurations(output.list());
+      res.json({
+        ok: true,
+        outputDir: config.paths.outputDir,
+        note: 'files here live on the container disk and are lost on redeploy; Drive is the permanent copy',
+        count: files.length,
+        files: files.map((f) => ({
+          ...f,
+          download: `/files/${encodeURIComponent(f.name)}?token=${encodeURIComponent(String(req.query.token || ''))}`,
+        })),
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.get('/files/:name', (req, res) => {
+    if (!authorised(req)) {
+      res.status(401).json({ ok: false, error: 'unauthorised' });
+      return;
+    }
+    const file = output.resolveFile(req.params.name);
+    if (!file) {
+      res.status(404).json({ ok: false, error: 'not found' });
+      return;
+    }
+    res.setHeader('Content-Type', file.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(file)}"`);
+    fs.createReadStream(file).pipe(res);
   });
 
   app.get('/selftest', async (req, res) => {

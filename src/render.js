@@ -6,6 +6,7 @@ const config = require('./config');
 const log = require('./log');
 const tools = require('./ffmpeg');
 const dates = require('./dates');
+const system = require('./system');
 
 /* ------------------------------------------------------------------ text ---- */
 
@@ -89,11 +90,32 @@ function wrap(text, maxChars, maxLines) {
 
 /* ----------------------------------------------------------------- filter --- */
 
+/**
+ * The zoom pass is the expensive step: zoompan scales every output pixel.
+ * On a memory-starved free instance it renders the motion at a reduced size and
+ * upscales afterwards, which cuts both RAM and CPU roughly fourfold.
+ * Set ZOOM_RENDER_SCALE to override (1 = always full resolution).
+ */
+function zoomRenderSize(width, height) {
+  const configured = Number(config.render.zoomScale);
+  const limit = system.memoryLimitMB();
+  let scale = Number.isFinite(configured) && configured > 0 ? configured : 1;
+  if (!Number.isFinite(configured) || configured <= 0) {
+    // Auto: shrink when the container has less than ~700 MB to play with.
+    if (limit < 700) scale = 0.5;
+    if (limit < 400) scale = 0.34;
+  }
+  const w = Math.max(270, Math.round((width * scale) / 2) * 2);
+  const h = Math.max(480, Math.round((height * scale) / 2) * 2);
+  return { w, h, scale: w / width, memoryLimitMB: limit };
+}
+
 function buildFilter({ duration, story, footer }) {
   const { width, height, fps, accent, zoomRate, channelName, grain } = config.render;
   const dur = Math.max(2, duration);
   const font = findFont();
   const fontArg = font ? `:fontfile='${escPath(font)}'` : '';
+  const zoom = zoomRenderSize(width, height);
 
   const titleSize = Math.round(width * 0.062);
   const hookSize = Math.round(width * 0.037);
@@ -121,7 +143,9 @@ function buildFilter({ duration, story, footer }) {
   // Slow cinematic push-in over the still background.
   graph.push(
     `[0:v]zoompan=z='min(1+${zoomRate}*on,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'`
-    + `:d=1:s=${width}x${height}:fps=${fps},setsar=1[bg]`,
+    + `:d=1:s=${zoom.w}x${zoom.h}:fps=${fps},setsar=1`
+    + (zoom.scale < 1 ? `,scale=${width}:${height}:flags=bicubic` : '')
+    + '[bg]',
   );
 
   const steps = [];
@@ -256,4 +280,4 @@ async function renderVideo({ backgroundFile, audioFile, story, dateKey, duration
   return outFile;
 }
 
-module.exports = { renderVideo, buildFilter, wrap, findFont };
+module.exports = { renderVideo, buildFilter, wrap, findFont, zoomRenderSize, plan: () => ({ ...zoomRenderSize(config.render.width, config.render.height), preset: config.render.preset }) };

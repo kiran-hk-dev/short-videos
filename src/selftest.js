@@ -14,6 +14,7 @@ const config = require('./config');
 const render = require('./render');
 const tts = require('./tts');
 const drive = require('./drive');
+const system = require('./system');
 
 function disk() {
   try {
@@ -58,8 +59,11 @@ async function main() {
       node: process.version,
       uptimeSeconds: Math.round(process.uptime()),
       cpus: os.cpus().length,
-      memoryTotalMB: Math.round(os.totalmem() / 1048576),
+      hostMemoryMB: Math.round(os.totalmem() / 1048576),
       memoryFreeMB: Math.round(os.freemem() / 1048576),
+      // What this container is actually allowed to use (free tier = ~512 MB).
+      memoryLimitMB: system.memoryLimitMB(),
+      cpuLimit: system.cpuLimit(),
     },
     disk: disk(),
     paths: {
@@ -69,6 +73,7 @@ async function main() {
     },
     binaries: {},
     font: render.findFont() || null,
+    renderPlan: render.plan(),
     tts: { requested: config.tts.engine },
     drive: { authKind: drive.authKind() },
   };
