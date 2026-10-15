@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { Readable } = require('stream');
 const { google } = require('googleapis');
 const config = require('./config');
 const log = require('./log');
@@ -139,7 +140,8 @@ async function uploadJson({ name, data, description }) {
     requestBody: { name, description, mimeType: 'application/json', parents: parentArgs() },
     media: {
       mimeType: 'application/json',
-      body: Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf8'),
+      // googleapis needs a stream, not a Buffer, for media bodies.
+      body: Readable.from([Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf8')]),
     },
     fields: 'id,name,size',
   });
@@ -159,7 +161,7 @@ async function updateJson(fileId, data) {
     fileId,
     media: {
       mimeType: 'application/json',
-      body: Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf8'),
+      body: Readable.from([Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf8')]),
     },
     fields: 'id,name,modifiedTime',
   });
