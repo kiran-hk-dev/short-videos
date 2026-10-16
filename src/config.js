@@ -47,8 +47,11 @@ function validTimeZone(value, fallback = 'Asia/Kolkata') {
   }
 }
 
-const width = int('WIDTH', 1080);
-const height = int('HEIGHT', 1920);
+// Defaults are tuned for a 512 MB / 0.5 CPU free instance: small, cheap to
+// encode, no motion pass. Raise WIDTH/HEIGHT and set RENDER_MOTION=zoom on a
+// bigger machine if you want the full 1080x1920 zoomed version.
+const width = int('WIDTH', 720);
+const height = int('HEIGHT', 1280);
 
 module.exports = {
   root: ROOT,
@@ -99,12 +102,12 @@ module.exports = {
   render: {
     width,
     height,
-    fps: int('FPS', 30),
-    crf: int('CRF', 26),
-    preset: str('PRESET', 'veryfast'),
+    fps: int('FPS', 24),
+    crf: int('CRF', 28),
+    preset: str('PRESET', 'ultrafast'),
     zoomRate: float('ZOOM_RATE', 0.0004),
     zoomScale: float('ZOOM_RENDER_SCALE', 0),
-    motion: str('RENDER_MOTION', 'auto').toLowerCase(),
+    motion: str('RENDER_MOTION', 'static').toLowerCase(),
     accent: str('ACCENT_COLOR', '#E8B44A'),
     channelName: str('CHANNEL_NAME', 'Daily Short'),
     fontPath: str('FONT_PATH', ''),

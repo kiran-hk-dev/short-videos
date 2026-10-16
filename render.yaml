@@ -34,3 +34,16 @@ services:
         sync: false
       - key: FONT_PATH
         value: /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+      # Free-tier safe render: 512 MB / 0.5 CPU cannot do 1080x1920 + zoom.
+      - key: WIDTH
+        value: "720"
+      - key: HEIGHT
+        value: "1280"
+      - key: FPS
+        value: "24"
+      - key: CRF
+        value: "28"
+      - key: PRESET
+        value: ultrafast
+      - key: RENDER_MOTION
+        value: static
