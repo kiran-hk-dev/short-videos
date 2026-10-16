@@ -32,6 +32,16 @@ function buildPrompt(dateKey, theme, words) {
   ].join('\n');
 }
 
+/** Only try the LLM when the setting really looks like a URL. */
+function ollamaConfigured() {
+  const base = (config.ollama.baseUrl || '').trim();
+  if (!/^https?:\/\//i.test(base)) {
+    if (base) log.warn(`OLLAMA_BASE_URL="${base}" is not a URL - using the offline story writer`);
+    return false;
+  }
+  return true;
+}
+
 async function callOllama(dateKey) {
   const base = config.ollama.baseUrl.replace(/\/+$/, '');
   const controller = new AbortController();
@@ -294,7 +304,7 @@ async function getStory(dateKey, { force = false } = {}) {
   }
 
   let story;
-  if (config.ollama.baseUrl) {
+  if (ollamaConfigured()) {
     try {
       story = normalise(await callOllama(dateKey), dateKey);
       log.info('Story generated with Ollama', { model: config.ollama.model, dateKey });

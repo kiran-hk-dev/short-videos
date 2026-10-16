@@ -71,6 +71,10 @@ module.exports = {
     enabled: bool('SCHEDULER_ENABLED', true),
     intervalMinutes: Math.max(1, int('SCHEDULER_INTERVAL_MINUTES', 5)),
     catchUpDays: int('CATCH_UP_DAYS', 1),
+    // After every deploy/restart, immediately produce today's video if it is
+    // still missing, instead of waiting for the slot or a manual trigger.
+    runOnStart: bool('RUN_ON_START', true),
+    startupDelaySeconds: int('STARTUP_DELAY_SECONDS', 20),
   },
 
   paths: {

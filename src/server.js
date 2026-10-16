@@ -39,6 +39,7 @@ function publicConfig() {
     schedulerEnabled: config.schedule.enabled,
     schedulerIntervalMinutes: config.schedule.intervalMinutes,
     catchUpDays: config.schedule.catchUpDays,
+    runOnStart: config.schedule.runOnStart,
     size: `${config.render.width}x${config.render.height}@${config.render.fps}`,
     theme: config.story.theme,
     ttsEngine: config.tts.engine,
@@ -90,8 +91,10 @@ function create() {
         config: publicConfig(),
         nextRun: scheduler.nextRun(),
         running: pipeline.isRunning(),
-        lastRun,
+        runOnStart: config.schedule.runOnStart,
         due: scheduler.plan(),
+        dueIgnoringSchedule: scheduler.plan(new Date(), { ignoreSchedule: true }),
+        lastRun,
         state: all,
       });
     } catch (error) {
